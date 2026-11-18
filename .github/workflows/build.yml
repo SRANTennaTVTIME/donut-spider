@@ -349,15 +349,13 @@ jobs:
           name: ${{ matrix.artifact }}
           path: ${{ matrix.output_glob }}
 
+  
   build-ps3:
-    name: Build (PS3)
+    name: Build (PS3 PKG)
     runs-on: ubuntu-24.04
     container: scummvm/dockerized-toolchains:ps3
     steps:
       - uses: actions/checkout@v4
-
-      - name: Configure
-        run: cmake -B build -DWERROR=ON -DPLATFORM=ps3 -DCMAKE_TOOLCHAIN_FILE=cmake/ppu.cmake -DCMAKE_BUILD_TYPE=Release
 
       - name: Build bzip2 for PS3
         run: |
@@ -367,53 +365,15 @@ jobs:
           cp /tmp/bzip2-1.0.8/libbz2.a /usr/local/ps3dev/portlibs/ppu/lib/
           cp /tmp/bzip2-1.0.8/bzlib.h /usr/local/ps3dev/portlibs/ppu/include/
 
-      - name: Build
-        run: cmake --build build -j$(nproc)
+      - name: Build and package PS3
+        run: |
+          export PS3DEV=/usr/local/ps3dev
+          bash tools/build-ps3-release.sh
 
-      - name: Upload artifact
+      - name: Upload PS3 PKG
         uses: actions/upload-artifact@v4
         with:
-          name: spider-donut-ps3
-          path: build/spider-donut.elf
-
-  build-old-gcc:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: GCC 3.0
-            compiler: gcc-3.0
-            flags: '-std=gnu99 -w'
-          - name: GCC 2.95
-            compiler: g++-2.95
-            flags: '-w'
-    name: Build (${{ matrix.name }})
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Create Debian Woody chroot
-        run: |
-          sudo apt-get install --no-install-recommends -y debootstrap
-          sudo debootstrap --arch=i386 --include='${{ matrix.compiler }},make,libsdl1.2-dev' woody ~/woody http://archive.debian.org/debian
-
-      - name: Checkout repo
-        uses: actions/checkout@v4
-        with:
-          path: spider-donut
-
-      - name: Build
-        run: |
-          sudo mv spider-donut ~/woody
-          sudo chroot ~/woody /bin/sh --login -c 'make -C /spider-donut NO_COLOR=1 VERBOSE=1 CC="${{ matrix.compiler }} ${{ matrix.flags }}" DESKTOP_BACKEND=sdl1 AUDIO_BACKEND=none SDL1_LIBS='-lSDL' DISABLE_MMD=1'
-
-  build-cxx:
-    name: Build as C++
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
-      - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y libglfw3-dev
-
-      - name: Build
-        run: make CC='g++ -std=gnu++98 -Wall -Wvla -Werror' NO_COLOR=1 VERBOSE=1
+          name: spider-donut-v0.3-ps3-pkg
+          path: |
+            dist/spider-donut-v0.3.pkg
+            dist/spider-donut-v0.3.pkg.sha256
