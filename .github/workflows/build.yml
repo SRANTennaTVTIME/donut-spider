@@ -377,3 +377,11 @@ jobs:
           path: |
             dist/spider-donut-v0.3.pkg
             dist/spider-donut-v0.3.pkg.sha256
+      - name: Locate SFO tools
+        run: |
+          echo "Searching for SFO tools..."
+          find /usr/local/ps3dev /usr/bin /usr/local/bin -iname '*sfo*' 2>/dev/null || true
+          echo "Checking commands..."
+          command -v sfo || true
+          command -v pkg || true
+          command -v package_finalize || true
